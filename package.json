@@ -1,0 +1,25 @@
+{
+  "name": "assignment-3-nabiha072005",
+  "version": "1.0.0",
+  "description": "Ensure you have a header with your **Name**, **Student ID number**, and **GitHub URL** in each source file!",
+  "main": "server.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node server.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/CSC317-S26/assignment-3-Nabiha072005.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/CSC317-S26/assignment-3-Nabiha072005/issues"
+  },
+  "homepage": "https://github.com/CSC317-S26/assignment-3-Nabiha072005#readme",
+  "dependencies": {
+    "express": "^5.2.1"
+  }
+}

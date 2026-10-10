@@ -1,0 +1,662 @@
+<!-- Name: Nabiha Khalid Sheikh -->
+<!-- Kitchen Rush -->
+<!-- Interactive JavaScript cooking game --> 
+
+<!DOCTYPE html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<style>
+body {
+    width: 50%;
+    margin: 0 auto;
+    background-color: rgb(225, 197, 197);
+}
+canvas {
+    border: 1px solid #d3d3d3;
+    background-color: #000000;
+}
+</style>
+</head>
+<body onload="startGame()">
+<script>
+
+
+// IMAGES
+
+var chefImg = new Image();
+chefImg.src = "Chef.png";
+
+var burgerImg = new Image();
+burgerImg.src = "Burger for game.png";
+
+var bottomBunImg = new Image();
+bottomBunImg.src = "bottomBun.png";
+
+var beefImg = new Image();
+beefImg.src = "beef.png";
+
+var cheeseImg = new Image();
+cheeseImg.src = "cheese.png";
+
+var topBunImg = new Image();
+topBunImg.src = "topBun.png";
+
+var iceCreamImg = new Image();
+iceCreamImg.src = "Ice cream for game.png";
+
+var coneImg = new Image();
+coneImg.src = "cone.png";
+
+var iceCreamActualImg = new Image();
+iceCreamActualImg.src = "iceCream.png";
+
+var waffleImg = new Image();
+waffleImg.src = "Waffle for game.png";
+
+var waffleActualImg = new Image();
+waffleActualImg.src = "waffle.png";
+
+var chickenImg = new Image();
+chickenImg.src = "chicken.png";
+
+var syrupImg = new Image();
+syrupImg.src = "syrup.png";
+
+var backgroundImg = new Image();
+backgroundImg.src = "Kitchen.png";
+
+
+// DATA
+
+var foods = [
+    {
+        name: "burger",
+        label: "Burger",
+        image: burgerImg,
+        recipe: ["bottom bun", "beef", "cheese", "top bun"]
+    },
+    {
+        name: "icecream",
+        label: "Ice Cream",
+        image: iceCreamImg,
+        recipe: ["cone", "ice cream"]
+    },
+    {
+        name: "waffle",
+        label: "Waffle",
+        image: waffleImg,
+        recipe: ["waffle", "chicken", "syrup"]
+    }
+];
+
+var ingredientTypes = [
+    { name: "bottom bun", image: bottomBunImg },
+    { name: "beef", image: beefImg },
+    { name: "cheese", image: cheeseImg },
+    { name: "top bun", image: topBunImg },
+    { name: "cone", image: coneImg },
+    { name: "ice cream", image: iceCreamActualImg },
+    { name: "waffle", image: waffleActualImg },
+    { name: "chicken", image: chickenImg },
+    { name: "syrup", image: syrupImg }
+];
+
+
+// GLOBALS
+
+var chef;
+
+var score = 0;
+var gameOver = false;
+var gameStarted = false;
+
+var currentFood;
+var builtStack = [];
+var recipeIndex = 0;
+
+// conveyor
+var conveyorSpeed = 3;
+var congratsTimer = 0;
+
+
+var conveyor = {
+    x: 0,
+    y: 390,
+    width: 640,
+    height: 70
+};
+
+var beltOffset = 0; //allows for the motion of the conveyor belt
+var conveyorIngredients = [];
+//spawn ingredient means to create a new ingredient on the conveyor belt
+var conveyorSpawnTimer = 0; //counter- how long has it been since the last ingredient was created
+var conveyorSpawnInterval = 90; //spawn a new ingredient every 90 frames (1.8 seconds)
+
+// stations
+var stations = [
+    { label: "Burger", foodName: "burger", x: 140, y: 520 },
+    { label: "Ice Cream", foodName: "icecream", x: 320, y: 520 },
+    { label: "Waffle", foodName: "waffle", x: 500, y: 520 }
+];
+
+
+// CANVAS
+
+var myGameArea = {
+    canvas: document.createElement("canvas"),
+    start: function() { //this is the start() function that we use later on - making a function attaced to an object
+        this.canvas.width = 640;
+        this.canvas.height = 640;
+        this.canvas.style = "position: absolute; top: 0px; left: 0px; right: 0px; bottom: 0px; margin: auto; border:2px solid blue";
+        this.context = this.canvas.getContext("2d");
+        document.body.insertBefore(this.canvas, document.body.childNodes[0]); //adds the canvas to the top of the webpage and then give me the first thing in the body and then the next so on and so forth 
+        this.interval = setInterval(updateGameArea, 20); // updateGameArea runs every 20 milliseconds-- 1000ms/20ms = 50 frames per second (1s = 1000ms)
+    }
+};
+
+
+// CONSTRUCTORS FOR OBJECTS- objects are the interactive portion of the game (moving portion of the game)
+
+function Chef(width, height, image, x, y) {
+    this.width = width;
+    this.height = height;
+    this.image = image;
+    this.x = x;
+    this.y = y;
+    this.speedX = 0; //start with the chef not moving
+
+    this.update = function() {
+        var ctx = myGameArea.context; //ctx: context (drawing tool)
+        if (this.image.complete) {
+            ctx.drawImage(
+                this.image,
+                this.x - this.width / 2, //subtracting this.width / 2 and his.height / 2 allows for the Chef to be centered rather than in the top left
+                this.y - this.height / 2,
+                this.width,
+                this.height
+            );
+        }
+    };
+}
+
+function ConveyorIngredient(name, image, x, y, width, height, speedX) { //constructs all the ingredients- we don't need a separate ingredient for each of them 
+    this.name = name;
+    this.image = image;
+    this.x = x;
+    this.y = y;
+    this.width = width;
+    this.height = height;
+    this.speedX = speedX;
+
+    this.update = function() {
+        var ctx = myGameArea.context;
+        if (this.image.complete) {
+            ctx.drawImage(this.image, this.x, this.y, this.width, this.height);
+        }
+    };
+
+    this.newPos = function() {
+        this.x += this.speedX;
+    };
+}
+
+
+// START
+
+function startGame() {
+    myGameArea.start();
+    chef = new Chef(120, 150, chefImg, 320, 585);
+    chooseNextFood();
+
+    //the HTML portion
+    document.addEventListener("keydown", keyDownHandler); 
+    document.addEventListener("keyup", keyUpHandler);
+}
+
+function beginGame() {
+    gameStarted = true;
+    gameOver = false;
+    score = 0;
+    builtStack = [];
+    recipeIndex = 0;
+    conveyorIngredients = [];
+    conveyorSpawnTimer = 0;
+    conveyorSpeed = 3;
+    congratsTimer = 0;
+
+    chooseNextFood();
+
+    chef.x = 320;
+    chef.speedX = 0;
+
+    for (let i = 0; i < 4; i++) { //creates 4 ingredients at the start of the game spaced out along the conveyor belt 
+        spawnConveyorIngredient(-i * 170); //the first 4 ingredients off screen to the left (so we don't see them) are spaced out by 170
+    } //this is important so that the overlapping of the ingredients does not happen at the start of the game and makes the conveyor belt looks full at the start 
+}
+
+
+// HELPERS
+
+function getIngredientByName(name) {
+    for (let i = 0; i < ingredientTypes.length; i++) {
+        if (ingredientTypes[i].name === name) { //going through all the ingredients in the array at the top ingredientTypes
+            return ingredientTypes[i];
+        }
+    }
+    return null;
+}
+
+function getWrongIngredients(correctName) {
+    return ingredientTypes.filter(item => item.name !== correctName); //filter() allows us to go through every item in the array and keep only the ones that match a condition
+}
+
+//finds which station is the chef at by calculating which station is the closest to the chef
+function getClosestStationToChef() {
+    var closestStation = stations[0];
+    var closestDistance = Math.abs(chef.x - stations[0].x);
+
+    for (let i = 1; i < stations.length; i++) { //loops through all the stations
+        let distance = Math.abs(chef.x - stations[i].x); //abs- absolute makes the value positive
+        if (distance < closestDistance) {
+            closestDistance = distance;
+            closestStation = stations[i];
+        }
+    }
+
+    return closestStation;
+}
+
+
+function getCatchableIngredient() {
+    var bestIngredient = null;
+    var smallestDistance = 999999; //assigning a very large distance so that anything will be considered a small distance 
+
+    for (let i = 0; i < conveyorIngredients.length; i++) {
+        let itemCenter = conveyorIngredients[i].x + conveyorIngredients[i].width / 2;
+        let distance = Math.abs(itemCenter - chef.x); 
+
+        if (distance < 50 && distance < smallestDistance) {
+            smallestDistance = distance;
+            bestIngredient = conveyorIngredients[i];
+        }
+    }
+
+    return bestIngredient;
+}
+
+//randomly generates the recipe
+function chooseNextFood() { 
+    currentFood = foods[Math.floor(Math.random() * foods.length)];
+    builtStack = [];
+    recipeIndex = 0;
+}
+
+function spawnConveyorIngredient(customX) {
+    var targetName = currentFood.recipe[recipeIndex];
+    var chosenIngredient;
+
+    if (Math.random() < 1/3) { //the target ingredient will have a 1 in 3 chance of appearing
+        chosenIngredient = getIngredientByName(targetName); 
+    } else { //the other 2/3 chance will be all the other ingredients across the recipes
+        var wrongIngredients = getWrongIngredients(targetName);
+        chosenIngredient = wrongIngredients[Math.floor(Math.random() * wrongIngredients.length)];
+    }
+
+    var startX = (typeof customX === "number") ? customX : -80;
+
+    conveyorIngredients.push(
+        new ConveyorIngredient(
+            chosenIngredient.name,
+            chosenIngredient.image,
+            startX,
+            conveyor.y + 8,
+            70,
+            50,
+            conveyorSpeed
+        )
+    );
+}
+
+
+// DRAWING- shows what the functions will look like 
+
+function drawConveyorBelt() {
+    var ctx = myGameArea.context;
+
+    ctx.fillStyle = "#444";
+    ctx.fillRect(conveyor.x, conveyor.y, conveyor.width, conveyor.height);
+
+    ctx.strokeStyle = "#666";
+    ctx.lineWidth = 2;
+
+    //drawing the diagonal line on the converyor belt
+    for (let x = conveyor.x - 40 + beltOffset; x < conveyor.x + conveyor.width; x += 30) { //the diagonals are 30 pixels apart as we set it here 
+        ctx.beginPath();
+        ctx.moveTo(x, conveyor.y + 8);
+        ctx.lineTo(x + 20, conveyor.y + conveyor.height - 8);
+        ctx.stroke();
+    }
+
+    ctx.strokeStyle = "#222";
+    ctx.lineWidth = 4;
+    ctx.strokeRect(conveyor.x, conveyor.y, conveyor.width, conveyor.height);
+
+    //drawing the two arcs on the sides of the conveyor belts
+    ctx.beginPath();
+    ctx.arc(conveyor.x, conveyor.y + conveyor.height / 2, 14, 0, Math.PI * 2);
+    ctx.fillStyle = "#777";
+    ctx.fill();
+
+    ctx.beginPath();
+    ctx.arc(conveyor.x + conveyor.width, conveyor.y + conveyor.height / 2, 14, 0, Math.PI * 2);
+    ctx.fillStyle = "#777";
+    ctx.fill();
+}
+
+function drawPlate(x, y) {
+    var ctx = myGameArea.context;
+    ctx.beginPath();
+    ctx.ellipse(x, y, 45, 15, 0, 0, 2 * Math.PI);
+    ctx.fillStyle = "white";
+    ctx.fill();
+    ctx.strokeStyle = "gray";
+    ctx.lineWidth = 3;
+    ctx.stroke();
+}
+
+function drawStations() {
+    var ctx = myGameArea.context;
+    ctx.textAlign = "center";
+    ctx.font = "20px Arial";
+    ctx.fillStyle = "white";
+
+    //drawing 3 plates for the 3 stations
+    for (let i = 0; i < stations.length; i++) {
+        let station = stations[i];
+        ctx.fillText(station.label, station.x, station.y - 40);
+        drawPlate(station.x, station.y);
+    }
+
+    ctx.textAlign = "start"; //aligning the text back to the start so just resetting the text alignment
+}
+
+function drawBuiltStack() {
+    var ctx = myGameArea.context;
+    var targetStation = null;
+
+    for (let i = 0; i < stations.length; i++) {
+        if (stations[i].foodName === currentFood.name) {
+            targetStation = stations[i];
+            break;
+        }
+    }
+
+    if (!targetStation) return; //if the player is not at the target station, the stack should not be drawn
+
+    //building the stack based on the recipe
+    for (let i = 0; i < builtStack.length; i++) {
+        let stackX = targetStation.x - 40;
+        let stackY = targetStation.y - 25 - (i * 23);
+        ctx.drawImage(builtStack[i].image, stackX, stackY, 80, 50);
+    }
+}
+
+function drawTargetRecipe() {
+    var ctx = myGameArea.context;
+
+    if (currentFood && currentFood.image.complete) {
+        ctx.drawImage(currentFood.image, 20, 20, 110, 155); //making the image of the recipe appear at the top left corner
+    }
+}
+
+function drawScore() {
+    var ctx = myGameArea.context;
+    ctx.fillStyle = "white";
+    ctx.font = "20px Arial";
+    ctx.fillText("Score: " + score, 520, 30);
+}
+
+function drawStartScreen() {
+    var ctx = myGameArea.context;
+
+    ctx.fillStyle = "rgba(0, 0, 0, 0.65)";
+    ctx.fillRect(0, 0, myGameArea.canvas.width, myGameArea.canvas.height);
+
+    ctx.fillStyle = "white";
+    ctx.textAlign = "center";
+
+    ctx.font = "42px Arial";
+    ctx.fillText("Kitchen Rush", myGameArea.canvas.width / 2, 180);
+
+    ctx.font = "24px Arial";
+    ctx.fillText("Build the correct recipe at the correct station", myGameArea.canvas.width / 2, 240);
+    ctx.fillText("Wrong ingredient or wrong station or both = Game Over", myGameArea.canvas.width / 2, 280);
+
+    ctx.font = "17px Arial";
+    ctx.fillText("Use left and right keys to move the chef. Use spacebar to put ingredient on the plate", myGameArea.canvas.width / 2, 320);
+    
+
+    ctx.font = "26px Arial";
+    ctx.fillText("Press Enter/ Return to Start", myGameArea.canvas.width / 2, 380);
+
+    ctx.textAlign = "start";
+}
+
+function drawCongratsFlash() {
+    var ctx = myGameArea.context;
+
+    ctx.fillStyle = "rgba(0, 0, 0, 0.35)";
+    ctx.fillRect(170, 220, 300, 100);
+
+    ctx.strokeStyle = "limegreen";
+    ctx.lineWidth = 4;
+    ctx.strokeRect(170, 220, 300, 100);
+
+    ctx.textAlign = "center";
+
+    ctx.fillStyle = "limegreen";
+    ctx.font = "42px Arial";
+    ctx.fillText("Good Job!", myGameArea.canvas.width / 2, 280);
+
+    ctx.textAlign = "start";
+}
+
+function drawGameOver() {
+    var ctx = myGameArea.context;
+
+    ctx.fillStyle = "rgba(0, 0, 0, 0.55)";
+    ctx.fillRect(0, 0, myGameArea.canvas.width, myGameArea.canvas.height);
+
+    ctx.fillStyle = "red";
+    ctx.font = "40px Arial";
+    ctx.textAlign = "center";
+    ctx.fillText("Game Over", myGameArea.canvas.width / 2, myGameArea.canvas.height / 2 - 20);
+
+    ctx.fillStyle = "white";
+    ctx.font = "28px Arial";
+    ctx.fillText("Score: " + score, myGameArea.canvas.width / 2, myGameArea.canvas.height / 2 + 35);
+
+    ctx.textAlign = "start";
+}
+
+
+// GAME ACTION
+
+function placeIngredient() {
+    if (gameOver || !gameStarted) return;
+
+    var selectedStation = getClosestStationToChef();
+    var caughtIngredient = getCatchableIngredient();
+
+    if (!caughtIngredient) {
+        return; //do nothing if the player makes an error (exits the function immediately)
+    }
+
+    var expectedStationName = currentFood.name;
+    var expectedIngredient = currentFood.recipe[recipeIndex];
+
+    var correctStation = selectedStation.foodName === expectedStationName;
+    var correctIngredient = caughtIngredient.name === expectedIngredient;
+
+    if (correctStation && correctIngredient) { //check the station and the ingredient
+        builtStack.push({
+            name: caughtIngredient.name,
+            image: caughtIngredient.image
+        });
+
+        recipeIndex++;
+
+        if (recipeIndex === currentFood.recipe.length) {
+            score++;
+
+            if (score % 3 === 0) { // "Good job" appears in increments of 3  (3, 6, 9 points)
+                congratsTimer = 60; // 60 frames / 50 frames = 1.2 seconds
+            }
+
+            chooseNextFood();
+        }
+    } else {
+        gameOver = true;
+    }
+
+    var index = conveyorIngredients.indexOf(caughtIngredient);
+    if (index !== -1) { //removing the ingredient from the conveyor belt to the plate on the station 
+        conveyorIngredients.splice(index, 1);
+    }
+}
+
+
+// Keyboard keys (Enter/Return, ArrowLeft, ArrowRight, Space)
+
+function keyDownHandler(e) {
+    if (!gameStarted) {
+        if (e.key === "Enter") {
+            beginGame();
+        }
+        return;
+    }
+
+    if (gameOver) {
+        if (e.key === "Enter") {
+            restartGame();
+        }
+        return;
+    }
+
+    if (e.key === "ArrowLeft") {
+        chef.speedX = -5;
+    } else if (e.key === "ArrowRight") {
+        chef.speedX = 5;
+    } else if (e.key === " " || e.code === "Space") {
+        e.preventDefault();
+        placeIngredient();
+    }
+}
+
+function keyUpHandler(e) {
+    if (e.key === "ArrowLeft" || e.key === "ArrowRight") {
+        chef.speedX = 0;
+    }
+}
+
+
+// LOOP
+
+function updateGameArea() {
+    var ctx = myGameArea.context;
+
+    ctx.fillStyle = "#ceabab";
+    ctx.fillRect(0, 0, myGameArea.canvas.width, myGameArea.canvas.height);
+
+    if (backgroundImg.complete) {
+        ctx.drawImage(backgroundImg, 0, 0, myGameArea.canvas.width, myGameArea.canvas.height);
+    }
+
+    if (!gameStarted) {
+        drawStations();
+        chef.update();
+        drawStartScreen();
+        return;
+    }
+
+    //increases the speed of the game when the player reaches 3 points (difficulty progression)
+    if (score >= 3) { 
+        conveyorSpeed = 5;
+    } else {
+        conveyorSpeed = 3;
+    }
+
+    beltOffset += 2; //to allow the conveyor belt to move 
+    if (beltOffset > 30) { //each diagonal that we draw is 30 pixels apart 
+        beltOffset = 0;
+    }
+
+    drawConveyorBelt();
+
+    if (!gameOver) { 
+        conveyorSpawnTimer++;
+        if (conveyorSpawnTimer >= conveyorSpawnInterval) {
+            spawnConveyorIngredient();
+            conveyorSpawnTimer = 0;
+        }
+    }
+
+    for (let i = 0; i < conveyorIngredients.length; i++) {
+        if (!gameOver) {
+            conveyorIngredients[i].newPos();
+        }
+        conveyorIngredients[i].update();
+    }
+
+    conveyorIngredients = conveyorIngredients.filter(function(item) {
+        return item.x < myGameArea.canvas.width + 100;
+    });
+
+    drawStations();
+    drawBuiltStack();
+
+    if (!gameOver) {
+        chef.x += chef.speedX;
+    }
+
+    if (chef.x < chef.width / 2) {
+        chef.x = chef.width / 2;
+    }
+
+    if (chef.x > myGameArea.canvas.width - chef.width / 2) {
+        chef.x = myGameArea.canvas.width - chef.width / 2;
+    }
+
+    chef.update();
+
+    drawTargetRecipe();
+    drawScore();
+
+    if (congratsTimer > 0) {
+        drawCongratsFlash();
+        congratsTimer--;
+    }
+
+    if (gameOver) {
+        drawGameOver();
+        document.getElementById("restartBtn").style.display = "inline";
+    } else {
+        document.getElementById("restartBtn").style.display = "none";
+    }
+}
+
+
+// RESTART
+
+function restartGame() {
+    beginGame();
+}
+</script>
+
+<button id="restartBtn" onclick="restartGame()"
+style="display:none; position:absolute; top:520px; left:50%; transform:translateX(-50%); z-index:10;">
+    Restart Game
+</button>
+</body>
+</html>
