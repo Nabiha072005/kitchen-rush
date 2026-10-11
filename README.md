@@ -76,12 +76,19 @@ Ensure you have the following installed:
 
 ### Installation
 
+```bash
 git clone https://github.com/Nabiha072005/kitchen-rush.git
+```bash
 cd kitchen-rush
+```bash
 npm install
+```bash
 node server.js
+```bash
 Visit:
+```bash
 `http://localhost:3001`
+```bash
 
 The Express server serves the game's HTML, JavaScript, and image assets from the `public` directory.
 
