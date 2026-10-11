@@ -9,7 +9,6 @@ The game combines real-time movement, randomized ingredient generation, sequenti
 **Frontend**
 - JavaScript
 - HTML5 Canvas API
-- HTML and CSS
 
 **Backend**
 - Node.js
