@@ -101,8 +101,6 @@ node server.js
 
 The Express server serves the game's HTML, JavaScript, and image assets from the `public` directory.
 
-*Note: If the server is running inside a virtual machine or remote environment, port forwarding may be required to access the game from your host computer.*
-
 ## 💻 Technical Implementation
 
 ### 1. Object-Oriented Game Architecture
